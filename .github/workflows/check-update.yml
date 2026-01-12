@@ -29,6 +29,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
 
       - name: Fetch Android Studio releases
         id: fetch
