@@ -108,6 +108,7 @@ jobs:
           cat build.properties
 
       - name: Create Pull Request
+        id: create-pr
         if: steps.check.outputs.needs_update == 'true'
         uses: peter-evans/create-pull-request@v8
         with:
@@ -140,3 +141,11 @@ jobs:
             :arrow_up: update
             :robot: bot
           delete-branch: true
+
+      # Trigger build workflow for the PR branch since GITHUB_TOKEN PRs don't trigger workflows
+      - name: Trigger build check
+        if: steps.create-pr.outputs.pull-request-number
+        run: |
+          gh workflow run build.yml --ref update/android-studio-${{ steps.check.outputs.latest_version }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
