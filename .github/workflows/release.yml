@@ -2,9 +2,12 @@ name: release
 
 on:
   workflow_dispatch:
+  release:
+    types: [published]
 
 jobs:
-  release:
+  create-tag:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -53,3 +56,10 @@ jobs:
           git tag -a "$TAG" -m "Android Studio ${{ steps.version.outputs.app_version }} (Release ${{ steps.version.outputs.app_release }})"
           git push origin "$TAG"
           echo "Created and pushed tag: $TAG"
+
+  virustotal:
+    if: github.event_name == 'release'
+    uses: portapps/.github/.github/workflows/app-virustotal.yml@master
+    secrets:
+      vt_api_key: ${{ secrets.VT_API_KEY }}
+      vt_monitor_api_key: ${{ secrets.VT_MONITOR_API_KEY }}
