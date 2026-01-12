@@ -114,6 +114,8 @@ jobs:
         uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          committer: TaishoVault <TaishoVault@users.noreply.github.com>
+          author: TaishoVault <TaishoVault@users.noreply.github.com>
           commit-message: "chore: update Android Studio to ${{ steps.check.outputs.latest_version }}"
           title: "chore: update Android Studio to ${{ steps.check.outputs.latest_version }}"
           body: |
