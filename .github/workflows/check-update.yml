@@ -85,6 +85,9 @@ jobs:
           echo "windows_zip=$WINDOWS_ZIP" >> $GITHUB_OUTPUT
           echo "windows_checksum=$WINDOWS_CHECKSUM" >> $GITHUB_OUTPUT
           echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          
+          # Clean up downloaded file
+          rm -f releases.json
 
       - name: Update build.properties
         if: steps.check.outputs.needs_update == 'true'
