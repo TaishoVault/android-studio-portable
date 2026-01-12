@@ -7,13 +7,13 @@ name: check-update
 on:
   schedule:
     # Run daily at 08:00 UTC
-    - cron: '0 8 * * *'
+    - cron: "0 8 * * *"
   workflow_dispatch:
     inputs:
       channel:
-        description: 'Release channel to check'
+        description: "Release channel to check"
         required: false
-        default: 'Patch'
+        default: "Patch"
         type: choice
         options:
           - Patch
@@ -40,43 +40,43 @@ jobs:
         id: check
         run: |
           CHANNEL="${{ inputs.channel || 'Patch' }}"
-          
+
           # Extract current version from build.properties
           CURRENT_VERSION=$(grep -E '^app\.version\s*=' build.properties | sed 's/.*=\s*//' | tr -d '[:space:]')
           echo "Current version: $CURRENT_VERSION"
-          
+
           # Parse latest release from JSON for the specified channel
           # Falls back to Release if Patch not found
           LATEST=$(cat releases.json | jq -r --arg channel "$CHANNEL" '
-            .content.item 
-            | map(select(.channel == $channel)) 
-            | first 
+            .content.item
+            | map(select(.channel == $channel))
+            | first
             // (.content.item | map(select(.channel == "Release")) | first)
           ')
-          
+
           if [ "$LATEST" = "null" ] || [ -z "$LATEST" ]; then
             echo "No releases found for channel: $CHANNEL"
             exit 0
           fi
-          
+
           LATEST_VERSION=$(echo "$LATEST" | jq -r '.version')
           LATEST_NAME=$(echo "$LATEST" | jq -r '.name')
           LATEST_BUILD=$(echo "$LATEST" | jq -r '.build')
-          
+
           # Get Windows ZIP URL
           WINDOWS_ZIP=$(echo "$LATEST" | jq -r '.download[] | select(.link | contains("windows.zip")) | .link')
           WINDOWS_CHECKSUM=$(echo "$LATEST" | jq -r '.download[] | select(.link | contains("windows.zip")) | .checksum')
-          
+
           echo "Latest version: $LATEST_VERSION ($LATEST_NAME)"
           echo "Windows ZIP: $WINDOWS_ZIP"
-          
+
           # Compare versions
           if [ "$CURRENT_VERSION" = "$LATEST_VERSION" ]; then
             echo "Already up to date!"
             echo "needs_update=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
+
           echo "Update available: $CURRENT_VERSION -> $LATEST_VERSION"
           echo "needs_update=true" >> $GITHUB_OUTPUT
           echo "latest_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
@@ -86,21 +86,24 @@ jobs:
           echo "windows_checksum=$WINDOWS_CHECKSUM" >> $GITHUB_OUTPUT
           echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
+          # Clean up downloaded file
+          rm -f releases.json
+
       - name: Update build.properties
         if: steps.check.outputs.needs_update == 'true'
         run: |
           VERSION="${{ steps.check.outputs.latest_version }}"
           ZIP_URL="${{ steps.check.outputs.windows_zip }}"
-          
+
           # Update app.version
           sed -i "s/^app\.version\s*=.*/app.version = $VERSION/" build.properties
-          
+
           # Reset app.release to 1 for new version
           sed -i "s/^app\.release\s*=.*/app.release = 1/" build.properties
-          
+
           # Update download URL
           sed -i "s|^atf\.win64\.url\s*=.*|atf.win64.url = $ZIP_URL|" build.properties
-          
+
           echo "Updated build.properties:"
           cat build.properties
 
@@ -113,23 +116,23 @@ jobs:
           title: "chore: update Android Studio to ${{ steps.check.outputs.latest_version }}"
           body: |
             ## Android Studio Update Available
-            
+
             | Field | Value |
             |-------|-------|
             | **Current Version** | ${{ steps.check.outputs.current_version }} |
             | **New Version** | ${{ steps.check.outputs.latest_version }} |
             | **Release Name** | ${{ steps.check.outputs.latest_name }} |
             | **Build** | ${{ steps.check.outputs.latest_build }} |
-            
+
             ### Changes
             - Updated `app.version` to `${{ steps.check.outputs.latest_version }}`
             - Reset `app.release` to `1`
             - Updated `atf.win64.url` to new download URL
-            
+
             ### Download
             - Windows ZIP: ${{ steps.check.outputs.windows_zip }}
             - Checksum: `${{ steps.check.outputs.windows_checksum }}`
-            
+
             ---
             *This PR was automatically created by the check-update workflow.*
           branch: update/android-studio-${{ steps.check.outputs.latest_version }}
